@@ -1,0 +1,12 @@
+// Map each SOAR incident to its attacker IP, alert count and tags
+SecurityIncident
+| where Title has "SOAR"
+| summarize arg_max(TimeGenerated, *) by IncidentNumber
+| mv-expand AlertId = AlertIds to typeof(string)
+| join kind=inner (
+    SecurityAlert
+    | summarize arg_max(TimeGenerated, *) by SystemAlertId
+    | extend IP = extract(@'"Address":"([^"]+)"', 1, Entities)
+  ) on $left.AlertId == $right.SystemAlertId
+| summarize Alerts = count() by IncidentNumber, IP, Severity, Status, Tags = tostring(Labels)
+| order by Alerts desc

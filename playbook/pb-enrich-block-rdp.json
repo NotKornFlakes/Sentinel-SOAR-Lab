@@ -1,0 +1,351 @@
+{
+  "definition": {
+    "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+    "contentVersion": "1.0.0.0",
+    "triggers": {
+      "Microsoft_Sentinel_incident": {
+        "type": "ApiConnectionWebhook",
+        "inputs": {
+          "host": {
+            "connection": {
+              "name": "@parameters('$connections')['azuresentinel']['connectionId']"
+            }
+          },
+          "body": {
+            "callback_url": "@listCallbackUrl()"
+          },
+          "path": "/incident-creation"
+        },
+        "runtimeConfiguration": {
+          "concurrency": {
+            "runs": 1
+          }
+        }
+      }
+    },
+    "actions": {
+      "Entities_-_Get_IPs": {
+        "runAfter": {},
+        "type": "ApiConnection",
+        "inputs": {
+          "host": {
+            "connection": {
+              "name": "@parameters('$connections')['azuresentinel']['connectionId']"
+            }
+          },
+          "method": "post",
+          "body": "@triggerBody()?['object']?['properties']?['relatedEntities']",
+          "path": "/entities/ip"
+        }
+      },
+      "For_each": {
+        "foreach": "@body('Entities_-_Get_IPs')?['IPs']",
+        "actions": {
+          "HTTP": {
+            "type": "Http",
+            "inputs": {
+              "uri": "https://api.abuseipdb.com/api/v2/check",
+              "method": "GET",
+              "headers": {
+                "Key": "@{parameters('AbuseIPDBKey')}",
+                "Accept": "application/json"
+              },
+              "queries": {
+                "ipAddress": "@{item()?['Address']}",
+                "maxAgeInDays": "90"
+              }
+            },
+            "runtimeConfiguration": {
+              "contentTransfer": {
+                "transferMode": "Chunked"
+              }
+            }
+          },
+          "Parse_JSON": {
+            "runAfter": {
+              "HTTP": [
+                "Succeeded"
+              ]
+            },
+            "type": "ParseJson",
+            "inputs": {
+              "content": "@body('HTTP')",
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "data": {
+                    "type": "object",
+                    "properties": {
+                      "ipAddress": {
+                        "type": "string"
+                      },
+                      "abuseConfidenceScore": {
+                        "type": "integer"
+                      },
+                      "countryCode": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "usageType": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "isp": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "domain": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "isTor": {
+                        "type": "boolean"
+                      },
+                      "totalReports": {
+                        "type": "integer"
+                      },
+                      "numDistinctUsers": {
+                        "type": "integer"
+                      },
+                      "lastReportedAt": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "Add_comment_to_incident_(V3)": {
+            "runAfter": {
+              "Parse_JSON": [
+                "Succeeded"
+              ]
+            },
+            "type": "ApiConnection",
+            "inputs": {
+              "host": {
+                "connection": {
+                  "name": "@parameters('$connections')['azuresentinel']['connectionId']"
+                }
+              },
+              "method": "post",
+              "body": {
+                "incidentArmId": "@triggerBody()?['object']?['id']",
+                "message": "<p class=\"editor-paragraph\">AbuseIPDB enrichment (automated)<br>IP: @{body('Parse_JSON')?['data']?['ipAddress']}<br>Abuse confidence score: @{body('Parse_JSON')?['data']?['abuseConfidenceScore']}/100<br>Reports: @{body('Parse_JSON')?['data']?['totalReports']} from @{body('Parse_JSON')?['data']?['numDistinctUsers']} users<br>ISP: @{body('Parse_JSON')?['data']?['isp']}<br>Usage: @{body('Parse_JSON')?['data']?['usageType']}<br>Country: @{body('Parse_JSON')?['data']?['countryCode']}<br>Tor exit node: @{body('Parse_JSON')?['data']?['isTor']}<br>Last reported: @{body('Parse_JSON')?['data']?['lastReportedAt']}</p>"
+              },
+              "path": "/Incidents/Comment"
+            }
+          },
+          "Condition": {
+            "actions": {
+              "Update_incident": {
+                "type": "ApiConnection",
+                "inputs": {
+                  "host": {
+                    "connection": {
+                      "name": "@parameters('$connections')['azuresentinel']['connectionId']"
+                    }
+                  },
+                  "method": "put",
+                  "body": {
+                    "incidentArmId": "@triggerBody()?['object']?['id']",
+                    "tagsToAdd": {
+                      "TagsToAdd": [
+                        {
+                          "Tag": "AbuseIPDB-High"
+                        }
+                      ]
+                    },
+                    "severity": "High"
+                  },
+                  "path": "/Incidents"
+                }
+              },
+              "Get_NSG_rule": {
+                "runAfter": {
+                  "Update_incident": [
+                    "Succeeded"
+                  ]
+                },
+                "type": "Http",
+                "inputs": {
+                  "uri": "https://management.azure.com/subscriptions/<SUBSCRIPTION-ID>/resourceGroups/CorpFund/providers/Microsoft.Network/networkSecurityGroups/CorpFundVM-nsg/securityRules/SOAR-Block?api-version=2023-09-01",
+                  "method": "GET",
+                  "authentication": {
+                    "type": "ManagedServiceIdentity",
+                    "audience": "https://management.azure.com/"
+                  }
+                },
+                "runtimeConfiguration": {
+                  "contentTransfer": {
+                    "transferMode": "Chunked"
+                  }
+                }
+              },
+              "Merge_Ips": {
+                "runAfter": {
+                  "Get_NSG_rule": [
+                    "Succeeded"
+                  ]
+                },
+                "type": "Compose",
+                "inputs": "@  union(body('Get_NSG_rule')?['properties']?['sourceAddressPrefixes'], createArray(items('For_each')?['Address']))"
+              },
+              "Block_IP": {
+                "runAfter": {
+                  "Merge_Ips": [
+                    "Succeeded"
+                  ]
+                },
+                "type": "Http",
+                "inputs": {
+                  "uri": "https://management.azure.com/subscriptions/<SUBSCRIPTION-ID>/resourceGroups/CorpFund/providers/Microsoft.Network/networkSecurityGroups/CorpFundVM-nsg/securityRules/SOAR-Block?api-version=2023-09-01",
+                  "method": "PUT",
+                  "headers": {
+                    "Content-Type": "application/json"
+                  },
+                  "body": {
+                    "properties": {
+                      "priority": 100,
+                      "direction": "Inbound",
+                      "access": "Deny",
+                      "protocol": "*",
+                      "sourcePortRange": "*",
+                      "destinationPortRange": "*",
+                      "destinationAddressPrefix": "*",
+                      "sourceAddressPrefixes": "@outputs('Merge_IPs')"
+                    }
+                  },
+                  "authentication": {
+                    "type": "ManagedServiceIdentity",
+                    "audience": "https://management.azure.com/"
+                  }
+                },
+                "runtimeConfiguration": {
+                  "contentTransfer": {
+                    "transferMode": "Chunked"
+                  }
+                }
+              },
+              "Add_comment_to_incident_(V3)_1": {
+                "runAfter": {
+                  "Block_IP": [
+                    "Succeeded"
+                  ]
+                },
+                "type": "ApiConnection",
+                "inputs": {
+                  "host": {
+                    "connection": {
+                      "name": "@parameters('$connections')['azuresentinel']['connectionId']"
+                    }
+                  },
+                  "method": "post",
+                  "body": {
+                    "incidentArmId": "@body('Update_incident')?['id']",
+                    "message": "<p class=\"editor-paragraph\">Auto-response: blocked @{items('For_each')?['Address']} in CorpFundVM-nsg (rule SOAR-Block). AbuseIPDB score: @{body('Parse_JSON')?['data']?['abuseConfidenceScore']}/100.</p>"
+                  },
+                  "path": "/Incidents/Comment"
+                }
+              }
+            },
+            "runAfter": {
+              "Add_comment_to_incident_(V3)": [
+                "Succeeded"
+              ]
+            },
+            "else": {
+              "actions": {
+                "Update_incident_1": {
+                  "type": "ApiConnection",
+                  "inputs": {
+                    "host": {
+                      "connection": {
+                        "name": "@parameters('$connections')['azuresentinel']['connectionId']"
+                      }
+                    },
+                    "method": "put",
+                    "body": {
+                      "incidentArmId": "@triggerBody()?['object']?['id']",
+                      "tagsToAdd": {
+                        "TagsToAdd": [
+                          {
+                            "Tag": "AbuseIPDB-Low"
+                          }
+                        ]
+                      }
+                    },
+                    "path": "/Incidents"
+                  }
+                }
+              }
+            },
+            "expression": {
+              "and": [
+                {
+                  "greaterOrEquals": [
+                    "@body('Parse_JSON')?['data']?['abuseConfidenceScore']",
+                    50
+                  ]
+                }
+              ]
+            },
+            "type": "If"
+          }
+        },
+        "runAfter": {
+          "Entities_-_Get_IPs": [
+            "Succeeded"
+          ]
+        },
+        "type": "Foreach",
+        "runtimeConfiguration": {
+          "concurrency": {
+            "repetitions": 1
+          }
+        }
+      }
+    },
+    "outputs": {},
+    "parameters": {
+      "AbuseIPDBKey": {
+        "defaultValue": "",
+        "type": "SecureString"
+      },
+      "$connections": {
+        "type": "Object",
+        "defaultValue": {}
+      }
+    }
+  },
+  "parameters": {
+    "AbuseIPDBKey": {},
+    "$connections": {
+      "type": "Object",
+      "value": {
+        "azuresentinel": {
+          "id": "/subscriptions/<SUBSCRIPTION-ID>/providers/Microsoft.Web/locations/eastus2/managedApis/azuresentinel",
+          "connectionId": "/subscriptions/<SUBSCRIPTION-ID>/resourceGroups/CorpFund/providers/Microsoft.Web/connections/azuresentinel",
+          "connectionName": "azuresentinel",
+          "connectionProperties": {
+            "authentication": {
+              "type": "ManagedServiceIdentity"
+            }
+          }
+        }
+      }
+    }
+  }
+}

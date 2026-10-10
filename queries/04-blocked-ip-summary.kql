@@ -1,0 +1,5 @@
+// Total attempts and last attempt per blocked IP
+let blocked = dynamic(["94.26.68.55", "57.129.147.251", "54.36.173.55"]);
+SecurityEvent
+| where EventID == 4625 and IpAddress in (blocked)
+| summarize TotalAttempts = count(), FirstSeen = min(TimeGenerated), LastSeen = max(TimeGenerated) by IpAddress

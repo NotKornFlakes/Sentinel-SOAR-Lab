@@ -1,0 +1,10 @@
+// Compromise check: everything except FailedLogons should be 0
+SecurityEvent
+| where TimeGenerated > ago(24h)
+| summarize
+    ExternalLogons = countif(EventID == 4624 and LogonType in (3, 10) and IpAddress !in ("", "-", "127.0.0.1")),
+    FailedLogons   = countif(EventID == 4625),
+    NewAccounts    = countif(EventID == 4720),
+    AddedToGroups  = countif(EventID in (4728, 4732, 4756)),
+    PasswordResets = countif(EventID in (4723, 4724)),
+    LogsCleared    = countif(EventID == 1102)

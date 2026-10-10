@@ -1,0 +1,4 @@
+// Total failed RDP logons and unique source IPs
+SecurityEvent
+| where EventID == 4625
+| summarize Attempts = count(), UniqueIPs = dcount(IpAddress), First = min(TimeGenerated), Last = max(TimeGenerated)

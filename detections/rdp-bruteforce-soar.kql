@@ -1,0 +1,15 @@
+// RDP Brute Force (SOAR)
+// Sentinel scheduled analytics rule
+// Run every 5 min | Look back 5 min | Alert when results > 0 | One alert per event
+// Entity mapping: IP -> Address -> IpAddress
+// Incident grouping: match all entities, 24 h  (65 alerts -> 6 incidents in testing)
+// MITRE: TA0006 Credential Access / T1110 Brute Force
+SecurityEvent
+| where EventID == 4625
+| where isnotempty(IpAddress) and IpAddress !in ("-", "127.0.0.1", "YOUR_HOME_IP")
+| summarize FailedAttempts = count(),
+            Accounts = make_set(TargetUserName, 10),
+            FirstSeen = min(TimeGenerated),
+            LastSeen = max(TimeGenerated)
+          by IpAddress, Computer
+| where FailedAttempts >= 10

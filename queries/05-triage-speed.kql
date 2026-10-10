@@ -1,0 +1,9 @@
+// Seconds from incident creation to automated AbuseIPDB tag
+// (incidents >= 7 were created after the automation rule went live)
+SecurityIncident
+| where Title has "SOAR" and IncidentNumber >= 7
+| summarize Created = min(CreatedTime),
+            Triaged = minif(TimeGenerated, tostring(Labels) has "AbuseIPDB") by IncidentNumber
+| where isnotempty(Triaged)
+| extend Seconds = datetime_diff('second', Triaged, Created)
+| project IncidentNumber, Created, Triaged, Seconds

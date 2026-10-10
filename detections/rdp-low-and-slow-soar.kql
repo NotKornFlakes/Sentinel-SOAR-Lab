@@ -1,0 +1,10 @@
+// RDP Low-and-Slow (SOAR)  -- tuning proposed after testing
+// Why: 57.129.147.251 held 80-107 attempts/hour (7-9 per 5 min), just under the
+// 10-per-5-min threshold, and went undetected for ~16 hours.
+// Run every 15 min | Look back 1 h | Same IP entity mapping + 24 h grouping
+SecurityEvent
+| where EventID == 4625
+| where isnotempty(IpAddress) and IpAddress !in ("-", "127.0.0.1", "YOUR_HOME_IP")
+| summarize FailedAttempts = count(), Accounts = make_set(TargetUserName, 10)
+          by IpAddress, Computer
+| where FailedAttempts >= 50

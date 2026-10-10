@@ -1,0 +1,8 @@
+// Incident scorecard (set time range to cover the whole run)
+SecurityIncident
+| where Title has "SOAR"
+| summarize arg_max(TimeGenerated, *) by IncidentNumber
+| summarize Incidents = count(),
+            AutoTriaged = countif(tostring(Labels) has "AbuseIPDB"),
+            High = countif(tostring(Labels) has "AbuseIPDB-High"),
+            Low = countif(tostring(Labels) has "AbuseIPDB-Low")

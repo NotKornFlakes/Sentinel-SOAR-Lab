@@ -1,0 +1,7 @@
+// Attempts per hour from auto-blocked IPs -- lines stop at the block
+let blocked = dynamic(["94.26.68.55", "57.129.147.251", "54.36.173.55"]);
+SecurityEvent
+| where TimeGenerated > ago(7d)
+| where EventID == 4625 and IpAddress in (blocked)
+| summarize Attempts = count() by bin(TimeGenerated, 1h), IpAddress
+| render timechart

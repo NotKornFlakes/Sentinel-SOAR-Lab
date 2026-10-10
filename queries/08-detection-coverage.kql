@@ -1,0 +1,10 @@
+// Share of attacking IPs / attack volume that produced a SOAR incident
+let incidentIPs = SecurityAlert
+    | where AlertName has "SOAR"
+    | extend IP = extract(@'"Address":"([^"]+)"', 1, Entities)
+    | distinct IP;
+SecurityEvent
+| where EventID == 4625
+| summarize Attempts = count() by IpAddress
+| extend Detected = IpAddress in (incidentIPs)
+| summarize IPs = count(), Attempts = sum(Attempts) by Detected

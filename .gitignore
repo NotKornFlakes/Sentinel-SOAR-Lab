@@ -1,0 +1,4 @@
+# never commit raw exports (they contain keys / subscription IDs)
+raw.json
+*.raw.json
+.env
