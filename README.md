@@ -36,7 +36,7 @@ flowchart LR
 |---|---|
 | Failed RDP logons captured | **56,885** from **142** unique IPs (about 62 hours) |
 | Incidents created | **13** |
-| Incidents enriched by the playbook | **8** (7 fully automatic, 1 manual test) |
+| Incidents enriched by the playbook | **9** (7 fully automatic, 2 manual tests) |
 | Scored High → auto-blocked at the NSG | **3** |
 | Scored Low → tagged for review | **5** |
 | Time to triage (automated incidents measured) | **8–18 seconds**, average about 12 |
@@ -52,6 +52,8 @@ flowchart LR
 | #7 | 94.26.68.55 | 930 | 8 s | 5 s after incident creation |
 | #9 | 57.129.147.251 | 1,618 | 14 s | 15 s after incident creation |
 | #10 | 54.36.173.55 | 132 | 18 s | 16 s after incident creation (blocked 11 min after its first attempt) |
+
+*A fourth IP, 80.66.83.43, was added to SOAR-Block during a manual playbook test on an older incident and is not counted above.*
 
 ![Attempts per hour from blocked IPs, with each line stopping at the block](screenshots/blocked-ip-timechart.png)
 
