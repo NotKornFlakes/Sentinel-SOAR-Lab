@@ -2,7 +2,7 @@
 
 An exposed Windows VM, Microsoft Sentinel and an Azure Logic App that **detect, investigate and block** RDP brute-force attackers with no human in the loop.
 
-Attackers were triaged in **8–18 seconds** (average about 12) instead of the 10–15 minutes a manual analyst workflow takes, and **every auto-blocked IP made zero further attempts.**
+The playbook enriched and blocked high-risk attackers 8–18 seconds after their incident opened (about 12 on average, across 3 incidents), compared with an estimated 10–15 minutes by hand. No further attempts from blocked IPs reached the VM.**
 
 > Follow-up to my [SOC Homelab](https://github.com/NotKornFlakes/SocHomelab) honeypot study. That project watched attackers; this one responds to them.
 
@@ -40,8 +40,8 @@ flowchart LR
 | Scored High → auto-blocked at the NSG | **3** |
 | Scored Low → tagged for review | **5** |
 | Time to triage (automated incidents measured) | **8–18 seconds**, average about 12 |
-| Attempts from blocked IPs after their block | **0** |
-| Alert-to-incident noise reduction | 65 alerts → 6 incidents (**~91%**) during the first night |
+| Attempts from blocked IPs that reached the VM after the block | **0** (the NSG drops them before Windows can log them) |
+| Alert grouping (24 h, per IP) | 65 alerts → 6 incidents during the first night|
 | Successful attacker logons | **0** |
 | Cost | about **$20** |
 
