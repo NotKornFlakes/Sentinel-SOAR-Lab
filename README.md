@@ -101,8 +101,8 @@ screenshots/  Evidence (sensitive identifiers cropped)
 
 | | |
 |---|---|
-| ![Incident enriched and escalated](screenshots/incident-high.png) | ![Logic App flow](screenshots/logic-app-flow.png) |
-| Incident with AbuseIPDB comment, High tag and auto-block comment | Playbook flow |
+| ![Incidents raised to High by the playbook](screenshots/incidents-high-list.png) | ![Logic App flow](screenshots/logic-app-flow.png) |
+| Incidents the playbook raised to High and tagged AbuseIPDB-High (#2 was a manual test before the automation rule went live) | Playbook flow |
 | ![SOAR-Block NSG rule](screenshots/soar-block-nsg.png) | ![Automation rule](screenshots/automation-rule.png) |
 | NSG deny rule populated by the playbook | Sentinel automation rule |
 
