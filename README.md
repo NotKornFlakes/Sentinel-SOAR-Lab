@@ -2,7 +2,7 @@
 
 An exposed Windows VM, Microsoft Sentinel and an Azure Logic App that **detect, investigate and block** RDP brute-force attackers with no human in the loop.
 
-The playbook enriched and blocked high-risk attackers 8–18 seconds after their incident opened (about 12 on average, across 3 incidents), compared with an estimated 10–15 minutes by hand. No further attempts from blocked IPs reached the VM.**
+The playbook enriched and blocked high-risk attackers **8–18 seconds** after their incident opened (about 12 on average, across 3 incidents), compared with an estimated 10–15 minutes by hand. **No further attempts from blocked IPs reached the VM.**
 
 > Follow-up to my [SOC Homelab](https://github.com/NotKornFlakes/SocHomelab) honeypot study. That project watched attackers; this one responds to them.
 
