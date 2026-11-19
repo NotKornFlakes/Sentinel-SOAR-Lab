@@ -47,11 +47,11 @@ flowchart LR
 
 ### Auto-blocked attackers
 
-| Incident | Attacker IP | Total attempts | Triage time | Last attempt |
-|---|---|---|---|---|
-| #7 | 94.26.68.55 | 930 | 8 s | 5 s after incident creation |
-| #9 | 57.129.147.251 | 1,618 | 14 s | 15 s after incident creation |
-| #10 | 54.36.173.55 | 132 | 18 s | 16 s after incident creation (blocked 11 min after its first attempt) |
+| Incident | Attacker IP | Triage time | Last attempt |
+|---|---|---|---|
+| #7 | 94.26.68.55 | 8 s | 5 s after incident creation |
+| #9 | 57.129.147.251 | 14 s | 15 s after incident creation |
+| #10 | 54.36.173.55 | 18 s | 16 s after incident creation (blocked 11 min after its first attempt) |
 
 *A fourth IP, 80.66.83.43, was added to SOAR-Block during a manual playbook test on an older incident and is not counted above.*
 
@@ -62,9 +62,9 @@ flowchart LR
 ## Findings
 
 ### 1. Low-and-slow attackers slipped under the threshold
-**57.129.147.251** attacked for **about 16 hours before triggering an incident.** It held a steady 80–107 attempts an hour (7–9 per 5 minutes), just under the 10-per-5-minutes threshold.
+**57.129.147.251** attacked for **about a day before triggering an incident (see the hourly chart).** It held a steady 80–107 attempts an hour (7–9 per 5 minutes), just under the 10-per-5-minutes threshold.
 
-**Fix:** a second rule, [`rdp-low-and-slow-soar.kql`](detections/rdp-low-and-slow-soar.kql), for 50 or more failures per hour. It would have caught this IP in its first hour.
+**Fix:** a second rule, [`rdp-low-and-slow-soar.kql`](detections/rdp-low-and-slow-soar.kql), for 50 or more failures per hour. It would have caught this IP within its first two hours.
 
 ### 2. Reputation alone misses new attackers
 **5 of the 8 enriched attackers scored under 50** on AbuseIPDB, so they weren't blocked, even though every one of them was actively brute-forcing the VM. Reputation feeds lag behind new infrastructure.
